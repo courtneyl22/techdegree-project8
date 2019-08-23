@@ -4,7 +4,7 @@
 
 const express = require('express');
 const Book = require('./models').Books;
-//const library = require('./library.db')
+
 const app = express();
 const path = require('path')
 const sequelize = require('./models').sequelize;
@@ -28,25 +28,30 @@ app.get('/', (req, res) => {
 });
 
 //render the books route
-app.get('/books', (req, res) => {
-    res.render('index');
+app.get('/books', async (req, res) => {
+    try{
+        const books = await Book.findAll();
+        res.render('index', {books: books});
+    } catch (error) {
+        console.log('error getting books', error);
+    }
 });
 
 //render the new book form
 app.get('/books/new', (req, res) => {
-    res.render('new-book');
+    res.render('new-book', {book: Book.build()});
 });
 
 //post the created book
 app.post('/books/new', async (req, res, next) => {
-  const book = await Book.create(req.body);
-  res.redirect('/books');
+  const book = await Book.create(req.body)
+    res.redirect('/books', book);
 });
 
 /* GET / retrieve book to update */
-app.get('/books/:id', async (req, res, next) => {
+app.get(`/books/:id`, async (req, res, next) => {
   const book = await Book.findAll();
-  res.render('update-book', { book, title: 'Update Book' });
+  res.render('update-book', { book });
 });
 
 /* PUT update book */
@@ -63,11 +68,35 @@ app.post('/books/:id/delete', async (req, res) => {
   res.redirect('/books');
 });
 
+
+
+// //const { Book } = db.models;
+
+// (async () => {
+//   await db.sequelize.sync({ force: true });
+//   try {
+//       console.log('Adding book to database...');
+//     const book = await Book.create({
+//       title: 'Beloved',
+//       author: 'Toni Morrison',
+//       genre: 'Magical Realism',
+//       year: 1987
+//     });
+//     console.log(book.toJSON());
+//   } catch (error) {
+//     console.error('Error connecting to the database: ', error);
+//   }
+// })();
+
+
+
 //port listener
 sequelize.sync()
-.then(() =>{const portNumber = 3000;
-app.listen(portNumber);
-console.log("App started on localhost at port " + portNumber);})
+    .then(() =>{
+        const portNumber = 3000;
+        app.listen(portNumber);
+        console.log("App started on localhost at port " + portNumber);
+    })
 
 
 /** 
@@ -87,27 +116,7 @@ app.use('/error', (err,req, res, next) => {
     res.render('error');
 });
 
-const projects = data.projects;
-const db = require('./db');
-const { Book } = db.models;
 
-(async () => {
-  await db.sequelize.sync({ force: true });
 
-  try {
-      console.log('Adding book to database...');
-    const book = await Book.create({
-      title: 'Toy Story',
-    });
-    console.log(book.toJSON());
-
-    const book2 = await Book.create({
-      title: 'The Incredibles'
-    });
-    console.log(book2.toJSON());
-
-  } catch (error) {
-    console.error('Error connecting to the database: ', error);
-  }
-})();*/
+*/
 
