@@ -1,29 +1,37 @@
-const { Router } = require('express');
-const { Book } = require('../models').Book;
+'use strict';
 
-const router = new Router();
+const fs = require('fs');
+const path = require('path');
+const Sequelize = require('sequelize');
+const basename = path.basename(__filename);
+const env = process.env.NODE_ENV || 'development';
+const config = require(__dirname + '/../config/config.json')[env];
+const db = {};
 
-/* POST create book */
-router.post('/', (req, res, next) => {
-  res.redirect('/books/' + book.id);
+let sequelize;
+if (config.use_env_variable) {
+  sequelize = new Sequelize(process.env[config.use_env_variable], config);
+} else {
+  sequelize = new Sequelize(config.database, config.username, config.password, config);
+}
+
+fs
+  .readdirSync(__dirname)
+  .filter(file => {
+    return (file.indexOf('.') !== 0) && (file !== basename) && (file.slice(-3) === '.js');
+  })
+  .forEach(file => {
+    const model = sequelize['import'](path.join(__dirname, file));
+    db[model.name] = model;
+  });
+
+Object.keys(db).forEach(modelName => {
+  if (db[modelName].associate) {
+    db[modelName].associate(db);
+  }
 });
 
-/* GET / retrieve book to update */
-router.get('/:id/edit', async (req, res, next) => {
-  const book = await Book.findByPk(req.params.id);
-  res.render('books/edit', { book, title: 'Edit book' });
-});
+db.sequelize = sequelize;
+db.Sequelize = Sequelize;
 
-/* PUT update book */
-router.put('/:id', async (req, res, next) => {
-  const book = await Book.findByPk(req.params.id);
-  await book.update(req.body);
-  res.redirect('/books/' + book.id);
-});
-
-/* Delete book */
-router.post('/books/:id/delete', async (req, res) => {
-  const bookToDelete = await Book.findByPk(req.params.id);
-  await bookToDelete.destroy();
-  res.redirect('/books');
-});
+module.exports = db;
