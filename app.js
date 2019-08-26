@@ -4,10 +4,10 @@
 
 const express = require('express');
 const Book = require('./models').Books;
-
 const app = express();
 const path = require('path')
 const sequelize = require('./models').sequelize;
+const bodyParser = require('body-parser');
 
 //setting the express view engine to pug files
 app.set('view engine', 'pug');
@@ -17,6 +17,12 @@ app.set('views', path.join(__dirname, "views"));
 
 // serving the static files to the public folder that uses express
 app.use('/static', express.static('public'));
+
+//support parsing of application/json type post data
+app.use(bodyParser.json());
+
+//support parsing of application/x-www-form-urlencoded post data
+app.use(bodyParser.urlencoded({ extended: true }));
 
 /**
  * setting up routes
@@ -39,26 +45,43 @@ app.get('/books', async (req, res) => {
 
 //render the new book form
 app.get('/books/new', (req, res) => {
-    res.render('new-book', {book: Book.build()});
+    res.render('new-book');
 });
 
 //post the created book
-app.post('/books/new', async (req, res, next) => {
-  const book = await Book.create(req.body)
-    res.redirect('/books', book);
+app.post('/books/new', async (req, res) => {
+    try {
+        const { title, author, genre, year } = req.body;
+        await Book.create({
+            title,
+            author,
+            genre,
+            year
+        }).then(() => {
+            res.redirect('/books')
+        });
+    } catch (error) {
+        if (error.name === 'SequelizeValidationError') {
+          const errors = error.errors.map(err => err.message);
+          res.render('error');
+          console.error('Validation errors: ', errors);
+        } else {
+          throw error;
+        }
+      }
 });
 
 /* GET / retrieve book to update */
-app.get(`/books/:id`, async (req, res, next) => {
-  const book = await Book.findAll();
+app.get('/books/:id', async (req, res) => {
+  const book = await Book.findByPk(req.params.id);
   res.render('update-book', { book });
 });
 
-/* PUT update book */
-app.put('/:id', async (req, res, next) => {
+//update book
+app.post('/books/:id', async (req, res) => {
   const book = await Book.findByPk(req.params.id);
   await book.update(req.body);
-  res.redirect('/books/' + book.id);
+  res.redirect('/books');
 });
 
 /* Delete book */
@@ -67,8 +90,6 @@ app.post('/books/:id/delete', async (req, res) => {
   await bookToDelete.destroy();
   res.redirect('/books');
 });
-
-
 
 // //const { Book } = db.models;
 
@@ -88,8 +109,6 @@ app.post('/books/:id/delete', async (req, res) => {
 //   }
 // })();
 
-
-
 //port listener
 sequelize.sync()
     .then(() =>{
@@ -97,8 +116,6 @@ sequelize.sync()
         app.listen(portNumber);
         console.log("App started on localhost at port " + portNumber);
     })
-
-
 /** 
 //creating the 404 status error
 app.use((req, res, next) => {
@@ -115,8 +132,4 @@ app.use('/error', (err,req, res, next) => {
     res.status(err.status);
     res.render('error');
 });
-
-
-
 */
-
