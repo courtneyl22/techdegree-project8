@@ -22,7 +22,7 @@ app.use('/static', express.static('public'));
 app.use(bodyParser.json());
 
 //support parsing of application/x-www-form-urlencoded post data
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.urlencoded({ extended: false }));
 
 /**
  * setting up routes
@@ -72,9 +72,20 @@ app.post('/books/new', async (req, res) => {
 });
 
 /* GET / retrieve book to update */
-app.get('/books/:id', async (req, res) => {
-  const book = await Book.findByPk(req.params.id);
-  res.render('update-book', { book });
+app.get('/books/:id', (req, res, next) => {
+    Book.findByPk(req.params.id).then(book => {
+        if(book) {
+            res.render('update-book', { book }) 
+        } else {
+            const err = new Error();
+            err.status = 404;
+            next(err);
+        }
+    })
+    .catch (err => {
+        err.status = 500
+        next(err);
+    }) 
 });
 
 //update book
@@ -98,7 +109,7 @@ app.post('/books/:id/delete', async (req, res) => {
 //creating the 404 status error
 app.use((req, res, next) => {
     const err = new Error('Oops! URL not found.');
-    err.status = 404;
+    err.status = 404 || 500;
     next(err);
 });
 
